@@ -1,0 +1,161 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My English Translator</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 22px;
+  font-family: Arial, sans-serif;
+  background: #fff;
+  color: #292929;
+}
+.app { max-width: 650px; margin: auto; }
+h2 { font-size: 21px; margin: 0 0 5px; }
+.subtitle { color: #888; font-size: 13px; margin-bottom: 22px; }
+.languages { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+select {
+  flex: 1; min-width: 0; padding: 11px;
+  border: 1px solid #ddd; border-radius: 9px;
+  background: white; font-size: 14px;
+}
+button {
+  border: 0; border-radius: 9px; padding: 11px 16px;
+  background: #35483d; color: white; cursor: pointer;
+}
+button.secondary { background: #f1f1ee; color: #333; }
+.swap { padding: 10px; }
+textarea {
+  width: 100%; min-height: 130px; resize: vertical;
+  border: 1px solid #ddd; border-radius: 12px;
+  padding: 14px; font: 16px/1.5 Arial;
+}
+.actions { display: flex; gap: 9px; margin: 12px 0 18px; }
+.result {
+  min-height: 130px; border: 1px solid #ddd;
+  border-radius: 12px; padding: 14px;
+  white-space: pre-wrap; line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.placeholder { color: #aaa; }
+.status { color: #888; font-size: 12px; margin: 10px 0; }
+</style>
+</head>
+<body>
+<div class="app">
+  <h2>My English Translator</h2>
+  <div class="subtitle">A little helper for your English practice</div>
+
+  <div class="languages">
+    <select id="source">
+      <option value="en">English</option>
+      <option value="ru">Русский</option>
+    </select>
+    <button class="secondary swap" id="swap">⇄</button>
+    <select id="target">
+      <option value="ru">Русский</option>
+      <option value="en">English</option>
+    </select>
+  </div>
+
+  <textarea id="input" placeholder="Type a word, phrase or sentence..."></textarea>
+
+  <div class="actions">
+    <button id="translate">Translate</button>
+    <button class="secondary" id="clear">Clear</button>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <div class="result placeholder" id="output">
+    Your translation will appear here...
+  </div>
+
+  <div class="actions">
+    <button class="secondary" id="copy">Copy translation</button>
+  </div>
+</div>
+
+<script>
+const input = document.getElementById("input");
+const output = document.getElementById("output");
+const status = document.getElementById("status");
+
+document.getElementById("swap").onclick = () => {
+  const source = document.getElementById("source");
+  const target = document.getElementById("target");
+  const old = source.value;
+  source.value = target.value;
+  target.value = old;
+};
+
+document.getElementById("clear").onclick = () => {
+  input.value = "";
+  output.textContent = "Your translation will appear here...";
+  output.classList.add("placeholder");
+  status.textContent = "";
+};
+
+document.getElementById("copy").onclick = async () => {
+  if (output.classList.contains("placeholder")) return;
+  try {
+    await navigator.clipboard.writeText(output.textContent);
+    status.textContent = "Copied!";
+  } catch {
+    status.textContent = "Please select and copy the text.";
+  }
+};
+
+document.getElementById("translate").onclick = async () => {
+  const text = input.value.trim();
+  const source = document.getElementById("source").value;
+  const target = document.getElementById("target").value;
+
+  if (!text) {
+    status.textContent = "Enter some text first.";
+    return;
+  }
+
+  if (source === target) {
+    status.textContent = "Choose different languages.";
+    return;
+  }
+
+  const button = document.getElementById("translate");
+  button.disabled = true;
+  status.textContent = "Translating...";
+
+  try {
+    const params = new URLSearchParams({
+      q: text,
+      langpair: source + "|" + target
+    });
+
+    const response = await fetch(
+      "https://api.mymemory.translated.net/get?" + params
+    );
+
+    if (!response.ok) throw new Error("Translation service unavailable.");
+
+    const data = await response.json();
+
+    if (data.responseStatus !== 200) {
+      throw new Error(data.responseDetails || "Translation failed.");
+    }
+
+    output.textContent = data.responseData.translatedText;
+    output.classList.remove("placeholder");
+    status.textContent = "Done!";
+  } catch (error) {
+    status.textContent = "Error: " + error.message;
+  } finally {
+    button.disabled = false;
+  }
+};
+</script>
+</body>
+</html>
