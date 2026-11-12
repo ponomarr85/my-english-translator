@@ -8,11 +8,9 @@
 <style>
 * { box-sizing: border-box; }
 body {
-  margin: 0;
-  padding: 22px;
+  margin: 0; padding: 22px;
   font-family: Arial, sans-serif;
-  background: #fff;
-  color: #292929;
+  background: #fff; color: #292929;
 }
 .app { max-width: 650px; margin: auto; }
 h2 { font-size: 21px; margin: 0 0 5px; }
@@ -28,62 +26,96 @@ button {
   background: #35483d; color: white; cursor: pointer;
 }
 button.secondary { background: #f1f1ee; color: #333; }
+button:disabled { opacity: .5; cursor: wait; }
 .swap { padding: 10px; }
 textarea {
-  width: 100%; min-height: 130px; resize: vertical;
+  width: 100%; min-height: 110px; resize: vertical;
   border: 1px solid #ddd; border-radius: 12px;
   padding: 14px; font: 16px/1.5 Arial;
 }
 .actions { display: flex; gap: 9px; margin: 12px 0 18px; }
 .result {
-  min-height: 130px; border: 1px solid #ddd;
+  min-height: 90px; border: 1px solid #ddd;
   border-radius: 12px; padding: 14px;
   white-space: pre-wrap; line-height: 1.5;
   overflow-wrap: anywhere;
 }
 .placeholder { color: #aaa; }
 .status { color: #888; font-size: 12px; margin: 10px 0; }
+.dictionary {
+  margin-top: 24px; border-top: 1px solid #ddd;
+  padding-top: 18px;
+}
+.dictionary h3 { font-size: 17px; margin: 0 0 5px; }
+.dictionary p { font-size: 12px; color: #888; margin: 0 0 12px; }
+.dictionary-result {
+  margin-top: 12px; padding: 14px;
+  border: 1px solid #ddd; border-radius: 12px;
+  font-size: 14px; line-height: 1.6;
+}
+.dictionary-result h4 { margin: 0 0 8px; font-size: 18px; }
+.word-phonetic { color: #888; margin-bottom: 12px; }
+.meaning { margin-top: 12px; }
+.meaning strong { color: #35483d; }
+.example { margin-top: 5px; color: #555; }
+.foot { font-size: 11px; color: #999; margin-top: 16px; }
 </style>
 </head>
 <body>
 <div class="app">
-  <h2>My English Translator</h2>
-  <div class="subtitle">A little helper for your English practice</div>
 
-  <div class="languages">
-    <select id="source">
-      <option value="en">English</option>
-      <option value="ru">Русский</option>
-    </select>
-    <button class="secondary swap" id="swap">⇄</button>
-    <select id="target">
-      <option value="ru">Русский</option>
-      <option value="en">English</option>
-    </select>
+<h2>My English Translator</h2>
+<div class="subtitle">A little helper for your English practice</div>
+
+<div class="languages">
+  <select id="source">
+    <option value="en">English</option>
+    <option value="ru">Русский</option>
+  </select>
+  <button class="secondary swap" id="swap">⇄</button>
+  <select id="target">
+    <option value="ru">Русский</option>
+    <option value="en">English</option>
+  </select>
+</div>
+
+<textarea id="input" placeholder="Type a word, phrase or sentence..."></textarea>
+
+<div class="actions">
+  <button id="translate">Translate</button>
+  <button class="secondary" id="clear">Clear</button>
+</div>
+
+<div class="status" id="status"></div>
+
+<div class="result placeholder" id="output">
+Your translation will appear here...
+</div>
+
+<div class="actions">
+  <button class="secondary" id="copy">Copy translation</button>
+</div>
+
+<div class="dictionary">
+  <h3>Word dictionary</h3>
+  <p>Definitions, pronunciation and usage examples</p>
+  <button id="lookupWord">Find meaning & examples</button>
+  <div class="dictionary-result placeholder" id="dictionaryResult">
+    Enter one English word to explore it.
   </div>
+</div>
 
-  <textarea id="input" placeholder="Type a word, phrase or sentence..."></textarea>
+<div class="foot">
+Translation: MyMemory · Dictionary: Free Dictionary API
+</div>
 
-  <div class="actions">
-    <button id="translate">Translate</button>
-    <button class="secondary" id="clear">Clear</button>
-  </div>
-
-  <div class="status" id="status"></div>
-
-  <div class="result placeholder" id="output">
-    Your translation will appear here...
-  </div>
-
-  <div class="actions">
-    <button class="secondary" id="copy">Copy translation</button>
-  </div>
 </div>
 
 <script>
 const input = document.getElementById("input");
 const output = document.getElementById("output");
 const status = document.getElementById("status");
+const dictionaryResult = document.getElementById("dictionaryResult");
 
 document.getElementById("swap").onclick = () => {
   const source = document.getElementById("source");
@@ -98,6 +130,8 @@ document.getElementById("clear").onclick = () => {
   output.textContent = "Your translation will appear here...";
   output.classList.add("placeholder");
   status.textContent = "";
+  dictionaryResult.textContent = "Enter one English word to explore it.";
+  dictionaryResult.classList.add("placeholder");
 };
 
 document.getElementById("copy").onclick = async () => {
@@ -119,7 +153,6 @@ document.getElementById("translate").onclick = async () => {
     status.textContent = "Enter some text first.";
     return;
   }
-
   if (source === target) {
     status.textContent = "Choose different languages.";
     return;
@@ -152,6 +185,80 @@ document.getElementById("translate").onclick = async () => {
     status.textContent = "Done!";
   } catch (error) {
     status.textContent = "Error: " + error.message;
+  } finally {
+    button.disabled = false;
+  }
+};
+
+document.getElementById("lookupWord").onclick = async () => {
+  const word = input.value.trim();
+
+  if (!/^[a-zA-Z'-]+$/.test(word)) {
+    dictionaryResult.textContent =
+      "Please enter one English word.";
+    return;
+  }
+
+  const button = document.getElementById("lookupWord");
+  button.disabled = true;
+  dictionaryResult.textContent = "Looking up the word...";
+
+  try {
+    const url =
+      "https://api.dictionaryapi.dev/api/v2/entries/en/" +
+      encodeURIComponent(word.toLowerCase());
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error("Word not found in the dictionary.");
+    }
+
+    const data = await response.json();
+    const entry = data[0];
+
+    const phonetic =
+      entry.phonetic ||
+      entry.phonetics?.find(p => p.text)?.text ||
+      "Not available";
+
+    const title = document.createElement("h4");
+    title.textContent = entry.word.toUpperCase();
+
+    const pronunciation = document.createElement("div");
+    pronunciation.className = "word-phonetic";
+    pronunciation.textContent = "Pronunciation: " + phonetic;
+
+    dictionaryResult.replaceChildren(title, pronunciation);
+    dictionaryResult.classList.remove("placeholder");
+
+    for (const meaning of entry.meanings || []) {
+      const section = document.createElement("div");
+      section.className = "meaning";
+
+      const part = document.createElement("strong");
+      part.textContent = meaning.partOfSpeech.toUpperCase();
+      section.appendChild(part);
+
+      for (const definition of (meaning.definitions || []).slice(0, 2)) {
+        const description = document.createElement("div");
+        description.textContent = "Meaning: " + definition.definition;
+        section.appendChild(description);
+
+        if (definition.example) {
+          const example = document.createElement("div");
+          example.className = "example";
+          example.textContent = "Example: " + definition.example;
+          section.appendChild(example);
+        }
+      }
+
+      dictionaryResult.appendChild(section);
+    }
+
+  } catch (error) {
+    dictionaryResult.textContent =
+      "Sorry, no dictionary entry found. Try another word.";
   } finally {
     button.disabled = false;
   }
